@@ -15,15 +15,14 @@ Note: MLlib supports GBTs for binary classification and for regression, using bo
 	  GBTs do not yet support multiclass classification. For multiclass problems, please use decision trees or Random Forests.
 
 
-Classification - Predict the class in which the data belongs
-	-> Works by majority vote. Each tree prediction is counted as 1 vote for a class.
-	-> Label is predicted to by the class which receive the highest number of votes.
+Regression - Predict the outcome (number).
+	-> Works by Averaging.  Each tree predicts a real value(number).
+	-> Label is predicted to be the mean of the tree predictions.
 
 The example below demonstrates how to load a LIBSVM data file, 
-parse it as an RDD of LabeledPoint and then perform classification using a Random Forest. 
-The test error is calculated to measure the algorithm accuracy.
+parse it as an RDD of LabeledPoint and then perform regression using a Random Forest. 
+The Mean Squared Error (MSE) is computed at the end to evaluate goodness of fit.
 """
-
 
 # Imports
 # Import DecisionTree / DecisionTreeModel
@@ -50,20 +49,17 @@ data = MLUtils.loadLibSVMFile(sc, 'jingrong/sample_libsvm_data.txt')
 # Empty categoricalFeaturesInfo indicates that all features are continuous.
 # In practice -> use more iterations
 
-# Settings featureSubsetStrategy to "auto" lets the algo choose automatically
-model = GradientBoostedTrees.trainClassifier(trainingData,
-    categoricalFeaturesInfo={}, numIterations=5)
+model = GradientBoostedTrees.trainRegressor(trainingData, categoricalFeaturesInfo={}, numIterations=3)
 
 # Evaluate the model on test instances, compute test error
 allPredictions = model.predict(testData.map(lambda x: x.features))
 predictionsAndLabels = testData.map(lambda pl: pl.label).zip(allPredictions)
-testError = predictionsAndLabels.filter(lambda (v, p): v != p).count() / float(testData.count())
+testMeanSquaredError = predictionsAndLabels.map(lambda (v, p): (v - p) * (v - p)).sum() / float(testData.count())
 
 # Printing results
-print
-print "Tested Error: ", testError
+print "Tested Mean Squared Error: ", testMeanSquaredError
 print 
-print "Learned classification Gradient Boosted Tree model: "
+print "Learned regression Gradient Boosted Tree model: "
 print model.toDebugString()
 
 """
